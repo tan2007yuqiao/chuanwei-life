@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>川味生活 · 巴蜀市井烟火</title>
+  <meta name="description" content="探索四川美食、景点、方言与巴蜀市井文化，发现一碗面、一条街、一方话里的川味生活。" />
+  <meta name="theme-color" content="#3E2C1C" />
+
+  <!-- ============================================================
+       引入 Tailwind CSS CDN（不依赖任何构建工具）
+       ============================================================ -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ============================================================
+       自定义主题色：暖棕 + 青竹绿
+       ============================================================ -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // 主色：暖棕系（酱油、木桌、老巷）
+            paper:   '#F7F1E3',   // 宣纸底色
+            kraft:   '#EBDCBF',   // 牛皮纸
+            ink:     '#3E2C1C',   // 墨字
+            brown: {
+              100: '#E8D5B7',
+              300: '#C9A876',
+              500: '#8B5A2B',
+              700: '#5C3A1E',
+              900: '#3E2C1C',
+            },
+            // 辅色：青竹绿
+            bamboo: {
+              100: '#D7E8D4',
+              300: '#8FB996',
+              500: '#4E8E62',
+              700: '#2F6B45',
+            },
+            chili: '#C0392B',     // 一点辣椒红做点缀
+          },
+          fontFamily: {
+            // 国风感：优先系统衬线 / 楷体
+            song: ['"Noto Serif SC"', '"Songti SC"', 'STSong', 'serif'],
+          },
+          boxShadow: {
+            soft: '0 6px 20px -8px rgba(62, 44, 28, 0.25)',
+            card: '0 4px 14px -6px rgba(62, 44, 28, 0.2)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- ============================================================
+       全局自定义样式
+       ============================================================ -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      /* 内容区上内边距，避免锚点被固定导航栏遮挡 */
+      .scroll-offset { scroll-margin-top: 80px; }
+
+      /* 手绘纸纹背景（用极淡噪点渐变模拟，不依赖外部图） */
+      .paper-bg {
+        background-color: theme('colors.paper');
+        background-image:
+          radial-gradient(rgba(139, 90, 43, 0.06) 1px, transparent 1px),
+          radial-gradient(rgba(78, 142, 98, 0.05) 1px, transparent 1px);
+        background-size: 22px 22px, 28px 28px;
+        background-position: 0 0, 11px 14px;
+      }
+
+      /* 卡片 hover 上浮 */
+      .card-hover {
+        transition: transform .3s ease, box-shadow .3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 14px 28px -10px rgba(62, 44, 28, 0.35);
+      }
+
+      /* 印章小红方块 */
+      .seal {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: theme('colors.chili');
+        color: #fff;
+        font-family: theme('fontFamily.song');
+        border-radius: 6px;
+        letter-spacing: 2px;
+      }
+
+      /* 加载动画：三条描边的手绘感圆环 */
+      .spinner {
+        width: 48px; height: 48px;
+        border: 4px dashed theme('colors.bamboo.500');
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* 渐显动画（AI 结果出现时） */
+      .fade-in { animation: fadeIn .6s ease both; }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* 悬浮弹幕：从右往左飘过屏幕，不占文档流 */
+      .danmaku-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;       /* 不挡点击 */
+        z-index: 30;                /* 在内容之上、导航和灯箱之下 */
+        overflow: hidden;
+      }
+      .danmaku-item {
+        position: absolute;
+        left: 100%;
+        white-space: nowrap;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(4px);
+        color: #5C3A1E;
+        font-size: 12px;
+        box-shadow: 0 2px 8px rgba(62, 44, 28, 0.12);
+        animation: danmaku linear infinite;
+      }
+      @keyframes danmaku {
+        from { transform: translateX(0); }
+        to   { transform: translateX(calc(-100vw - 100%)); }
+      }
+
+      /* ===== 滚动渐入：元素进入视口时淡入上移 ===== */
+      .reveal {
+        opacity: 0;
+        transform: translateY(32px);
+        transition: opacity .7s ease, transform .7s ease;
+      }
+      .reveal.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* ===== Ken Burns：Banner 背景图缓慢缩放 ===== */
+      .ken-burns {
+        animation: kenburns 20s ease-in-out infinite alternate;
+      }
+      @keyframes kenburns {
+        from { transform: scale(1); }
+        to   { transform: scale(1.08); }
+      }
+
+      /* ===== 卡片图片 hover 缩放 ===== */
+      .img-zoom { overflow: hidden; }
+      .img-zoom img {
+        transition: transform .5s ease;
+      }
+      .img-zoom:hover img {
+        transform: scale(1.08);
+      }
+
+      /* ===== 导航栏滚动后加背景阴影 ===== */
+      .nav-scrolled {
+        background: rgba(245, 239, 224, 0.92) !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 16px rgba(62, 44, 28, 0.1);
+      }
+
+      /* ===== Banner 标题入场：逐字上浮 ===== */
+      .title-char {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: charIn .6s ease forwards;
+      }
+      @keyframes charIn {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ===== 按钮点击波纹 ===== */
+      .btn-ripple {
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-ripple::after {
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 0; height: 0;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.4);
+        transform: translate(-50%, -50%);
+        transition: width .4s ease, height .4s ease;
+      }
+      .btn-ripple:active::after {
+        width: 200px; height: 200px;
+      }
+
+      /* 动效降级：尊重用户的减少动态偏好 */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: .01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: .01ms !important;
+          scroll-behavior: auto !important;
+        }
+        .danmaku-layer { display: none !important; }
+      }
+
+      @media (max-width: 767px) {
+        /* 小屏默认不显示持续移动的弹幕，避免遮挡正文 */
+        .danmaku-layer { display: none; }
+      }
+    }
+  </style>
+</head>
+
+<body class="paper-bg text-ink font-song antialiased">
+
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-brown-900">跳到主要内容</a>
+
+  <!-- ============================================================
+       1. 顶部导航栏
+       ============================================================ -->
+  <header id="navbar"
+          class="fixed top-0 left-0 right-0 z-50 backdrop-blur bg-paper/85 border-b border-brown-100 shadow-sm">
+    <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
+      <!-- Logo / 标题 -->
+      <a href="#home" class="flex items-center gap-2 group">
+        <span class="seal w-9 h-9 text-sm font-bold">川</span>
+        <span class="text-xl sm:text-2xl font-bold tracking-wider text-brown-700">川味生活</span>
+      </a>
+
+      <!-- 桌面端菜单 -->
+      <ul class="hidden md:flex items-center gap-1 text-[15px]">
+        <li><a href="#home"     class="px-3 py-2 rounded-lg hover:bg-brown-100 transition">首页</a></li>
+        <li><a href="#food"     class="px-3 py-2 rounded-lg hover:bg-brown-100 transition">四川美食</a></li>
+        <li><a href="#scenery"  class="px-3 py-2 rounded-lg hover:bg-brown-100 transition">景点大全</a></li>
+        <li><a href="#dialect"  class="px-3 py-2 rounded-lg hover:bg-brown-100 transition">川味方言</a></li>
+        <li><a href="#ai"       class="px-3 py-2 rounded-lg text-bamboo-700 font-semibold hover:bg-bamboo-100 transition">AI创作馆</a></li>
+      </ul>
+
+      <!-- 移动端汉堡按钮 -->
+      <button id="menuBtn"
+              class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg hover:bg-brown-100"
+              aria-label="打开菜单" aria-expanded="false" aria-controls="mobileMenu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="7"  x2="20" y2="7"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="17" x2="20" y2="17"></line>
+        </svg>
+      </button>
+    </nav>
+
+    <!-- 移动端下拉菜单 -->
+    <div id="mobileMenu" class="md:hidden hidden bg-paper border-t border-brown-100" aria-hidden="true">
+      <ul class="px-4 py-2 space-y-1 text-[15px]">
+        <li><a href="#home"    class="block px-3 py-3 rounded-lg hover:bg-brown-100">首页</a></li>
+        <li><a href="#food"    class="block px-3 py-3 rounded-lg hover:bg-brown-100">四川美食</a></li>
+        <li><a href="#scenery" class="block px-3 py-3 rounded-lg hover:bg-brown-100">景点大全</a></li>
+        <li><a href="#dialect" class="block px-3 py-3 rounded-lg hover:bg-brown-100">川味方言</a></li>
+        <li><a href="#ai"      class="block px-3 py-3 rounded-lg text-bamboo-700 font-semibold hover:bg-bamboo-100">AI创作馆</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       悬浮弹幕：冷知识从右往左飘过，不占页面空间
+       ============================================================ -->
+  <div class="danmaku-layer" aria-hidden="true">
+    <!-- 每条弹幕：top 控制垂直位置，animation-duration 速度，animation-delay 错峰 -->
+    <span class="danmaku-item" style="top:18%; animation-duration:28s; animation-delay:0s;">🌶️ 成都人一年要吃掉 3 亿斤花椒</span>
+    <span class="danmaku-item" style="top:32%; animation-duration:34s; animation-delay:6s;">🥢 回锅肉被称为"川菜第一菜"</span>
+    <span class="danmaku-item" style="top:48%; animation-duration:26s; animation-delay:12s;">💬 "不存在"不是真的没有，是"没关系"</span>
+    <span class="danmaku-item" style="top:62%; animation-duration:32s; animation-delay:3s;">💧 九寨沟的水蓝，是矿物质对蓝光的散射</span>
+    <span class="danmaku-item" style="top:76%; animation-duration:30s; animation-delay:9s;">🍵 成都人一天要喝掉 30 万杯盖碗茶</span>
+    <span class="danmaku-item" style="top:24%; animation-duration:36s; animation-delay:15s;">☕ 成都独立咖啡馆数量全国第二</span>
+    <span class="danmaku-item" style="top:55%; animation-duration:28s; animation-delay:18s;">💴 世界第一张纸币"交子"诞生在成都</span>
+    <span class="danmaku-item" style="top:82%; animation-duration:33s; animation-delay:21s;">🗣️ "摆龙门阵"语出薛仁贵东征</span>
+  </div>
+
+  <main id="main-content">
+  <!-- ============================================================
+       2. 首页 Banner
+       ============================================================ -->
+  <section id="home"
+           class="scroll-offset relative pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden">
+    <!-- 国风背景：CSS 渐变天空 + SVG 层叠远山 + 熊猫竹子（四川特色） -->
+    <div class="absolute inset-0" aria-hidden="true">
+      <!-- 天空暖调渐变 -->
+      <div class="absolute inset-0 bg-gradient-to-b from-paper via-paper to-bamboo-100/50"></div>
+      <!-- 远山剪影：三层青竹绿，由远及近 -->
+      <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 400" preserveAspectRatio="none" style="height:55%;">
+        <!-- 最远层：最浅 -->
+        <path d="M0,280 Q180,180 360,240 T720,220 T1080,250 T1440,210 L1440,400 L0,400 Z" fill="#A8C5A0" opacity="0.4"/>
+        <!-- 中间层 -->
+        <path d="M0,320 Q200,220 400,280 T800,260 T1200,290 T1440,250 L1440,400 L0,400 Z" fill="#7BA87A" opacity="0.5"/>
+        <!-- 最近层：最深 -->
+        <path d="M0,360 Q240,280 480,330 T960,310 T1440,340 L1440,400 L0,400 Z" fill="#4E8E62" opacity="0.6"/>
+      </svg>
+      <!-- 左下角：竹子丛 + 熊猫（四川标志） -->
+      <svg class="absolute bottom-0 left-4 sm:left-12" width="140" height="200" viewBox="0 0 140 200" fill="none">
+        <!-- 竹杆 -->
+        <line x1="30" y1="200" x2="30" y2="60" stroke="#5A8A5E" stroke-width="5" stroke-linecap="round"/>
+        <line x1="55" y1="200" x2="55" y2="40" stroke="#4E8E62" stroke-width="6" stroke-linecap="round"/>
+        <line x1="80" y1="200" x2="80" y2="80" stroke="#5A8A5E" stroke-width="4" stroke-linecap="round"/>
+        <!-- 竹节 -->
+        <line x1="25" y1="120" x2="35" y2="120" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="25" y1="90" x2="35" y2="90" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="49" y1="140" x2="61" y2="140" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="49" y1="100" x2="61" y2="100" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="49" y1="70" x2="61" y2="70" stroke="#3D6B41" stroke-width="2"/>
+        <!-- 竹叶 -->
+        <ellipse cx="20" cy="70" rx="12" ry="4" fill="#6BA36F" transform="rotate(-30 20 70)"/>
+        <ellipse cx="40" cy="55" rx="10" ry="3" fill="#7BA87A" transform="rotate(20 40 55)"/>
+        <ellipse cx="65" cy="35" rx="14" ry="4" fill="#6BA36F" transform="rotate(-15 65 35)"/>
+        <ellipse cx="45" cy="45" rx="11" ry="3" fill="#7BA87A" transform="rotate(35 45 45)"/>
+        <ellipse cx="90" cy="65" rx="10" ry="3" fill="#6BA36F" transform="rotate(-25 90 65)"/>
+        <!-- 熊猫：坐在竹丛旁 -->
+        <g transform="translate(95, 130)">
+          <!-- 身体 -->
+          <ellipse cx="20" cy="35" rx="22" ry="18" fill="#F5EFE0"/>
+          <!-- 头 -->
+          <circle cx="20" cy="14" r="14" fill="#F5EFE0"/>
+          <!-- 耳朵 -->
+          <circle cx="9" cy="5" r="5" fill="#2D2A26"/>
+          <circle cx="31" cy="5" r="5" fill="#2D2A26"/>
+          <!-- 黑眼圈 -->
+          <ellipse cx="14" cy="13" rx="4" ry="5" fill="#2D2A26" transform="rotate(-15 14 13)"/>
+          <ellipse cx="26" cy="13" rx="4" ry="5" fill="#2D2A26" transform="rotate(15 26 13)"/>
+          <!-- 眼睛白点 -->
+          <circle cx="15" cy="12" r="1.2" fill="#F5EFE0"/>
+          <circle cx="25" cy="12" r="1.2" fill="#F5EFE0"/>
+          <!-- 鼻子 -->
+          <ellipse cx="20" cy="18" rx="2" ry="1.5" fill="#2D2A26"/>
+          <!-- 嘴 -->
+          <path d="M17,21 Q20,24 23,21" stroke="#2D2A26" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <!-- 手臂 -->
+          <ellipse cx="2" cy="32" rx="6" ry="9" fill="#2D2A26" transform="rotate(-20 2 32)"/>
+          <ellipse cx="38" cy="32" rx="6" ry="9" fill="#2D2A26" transform="rotate(20 38 32)"/>
+          <!-- 腿 -->
+          <ellipse cx="10" cy="50" rx="7" ry="5" fill="#2D2A26"/>
+          <ellipse cx="30" cy="50" rx="7" ry="5" fill="#2D2A26"/>
+        </g>
+      </svg>
+      <!-- 右下角：竹子丛 -->
+      <svg class="absolute bottom-0 right-4 sm:right-12" width="100" height="180" viewBox="0 0 100 180" fill="none">
+        <line x1="25" y1="180" x2="25" y2="50" stroke="#4E8E62" stroke-width="5" stroke-linecap="round"/>
+        <line x1="50" y1="180" x2="50" y2="30" stroke="#5A8A5E" stroke-width="6" stroke-linecap="round"/>
+        <line x1="72" y1="180" x2="72" y2="70" stroke="#4E8E62" stroke-width="4" stroke-linecap="round"/>
+        <line x1="20" y1="110" x2="30" y2="110" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="20" y1="80" x2="30" y2="80" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="44" y1="130" x2="56" y2="130" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="44" y1="90" x2="56" y2="90" stroke="#3D6B41" stroke-width="2"/>
+        <line x1="44" y1="55" x2="56" y2="55" stroke="#3D6B41" stroke-width="2"/>
+        <ellipse cx="15" cy="60" rx="11" ry="3.5" fill="#6BA36F" transform="rotate(-25 15 60)"/>
+        <ellipse cx="35" cy="45" rx="10" ry="3" fill="#7BA87A" transform="rotate(20 35 45)"/>
+        <ellipse cx="60" cy="25" rx="13" ry="4" fill="#6BA36F" transform="rotate(-15 60 25)"/>
+        <ellipse cx="40" cy="35" rx="10" ry="3" fill="#7BA87A" transform="rotate(30 40 35)"/>
+        <ellipse cx="82" cy="55" rx="9" ry="3" fill="#6BA36F" transform="rotate(-20 82 55)"/>
+      </svg>
+      <!-- 右上角小太阳（暖橙） -->
+      <div class="absolute top-16 right-12 sm:top-20 sm:right-20 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-chili/30 to-chili/10 blur-sm"></div>
+      <div class="absolute top-16 right-12 sm:top-20 sm:right-20 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-chili/20"></div>
+    </div>
+    <!-- 国风装饰：竹影圆弧 -->
+    <div class="pointer-events-none absolute inset-0 opacity-25" aria-hidden="true">
+      <div class="absolute top-10 right-6 w-24 h-40 rounded-full border-[6px] border-bamboo-500/30 [border-bottom:none] [border-left:none] rotate-12"></div>
+      <div class="absolute bottom-16 left-8 w-16 h-32 rounded-full border-[5px] border-brown-300/40 [border-bottom:none] [border-right:none] -rotate-12"></div>
+    </div>
+
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <span class="inline-block seal px-3 py-1 text-xs mb-5">巴蜀 · 市井</span>
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-brown-900 leading-tight" id="heroTitle">
+        川味生活
+      </h1>
+      <p class="mt-5 text-lg sm:text-xl text-brown-700/90 leading-relaxed">
+        探寻四川市井烟火，感受巴蜀本土生活文化
+      </p>
+      <p class="mt-3 text-sm sm:text-base text-brown-500">
+        一碗面 · 一条街 · 一方话 · 一片山
+      </p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <a href="#food"
+           class="px-6 py-3 rounded-full bg-bamboo-500 text-white shadow-soft hover:bg-bamboo-700 transition">
+          去逛逛 →
+        </a>
+        <a href="#ai"
+           class="px-6 py-3 rounded-full bg-white/70 text-brown-700 border border-brown-300 hover:bg-brown-100 transition">
+          试试 AI 创作
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       3. 板块一：四川美食
+       ============================================================ -->
+  <section id="food" class="scroll-offset max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    <header class="mb-8 sm:mb-10 flex items-end gap-4">
+      <span class="seal w-10 h-10 text-base shrink-0">味</span>
+      <div>
+        <h2 class="text-2xl sm:text-3xl font-bold text-brown-900">四川美食</h2>
+        <p class="text-brown-500 mt-1 text-sm sm:text-base">麻辣鲜香，皆是市井滋味</p>
+      </div>
+    </header>
+
+    <!-- 卡片网格：移动端 1 列 / 平板 2 列 / 桌面 4 列 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- 卡片 1：担担面 -->
+      <article class="card-hover bg-white/80 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+        <!-- 担担面：真实图片 -->
+        <div class="aspect-[4/3] overflow-hidden">
+          <img src="https://aka.doubaocdn.com/s/V9CPtScwDr" alt="担担面"
+               class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+        </div>
+        <div class="p-4">
+          <h3 class="text-lg font-bold text-brown-900">担担面</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            面条劲道，肉臊喷香，红油、花椒面、葱花一淋，老成都街头的早晨就醒了。
+          </p>
+        </div>
+      </article>
+
+      <!-- 卡片 2：钵钵鸡 -->
+      <article class="card-hover bg-white/80 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+        <!-- 钵钵鸡：真实图片 -->
+        <div class="aspect-[4/3] overflow-hidden">
+          <img src="https://aka.doubaocdn.com/s/upFQeVxG2j" alt="钵钵鸡"
+               class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+        </div>
+        <div class="p-4">
+          <h3 class="text-lg font-bold text-brown-900">钵钵鸡</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            藤椒或红油汤底里泡着串串，麻辣鲜香，夏天配碗凉虾最巴适。
+          </p>
+        </div>
+      </article>
+
+      <!-- 卡片 3：冰粉 -->
+      <article class="card-hover bg-white/80 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+        <!-- 冰粉：真实图片 -->
+        <div class="aspect-[4/3] overflow-hidden">
+          <img src="https://aka.doubaocdn.com/s/YNcPID2vSW" alt="红糖冰粉"
+               class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+        </div>
+        <div class="p-4">
+          <h3 class="text-lg font-bold text-brown-900">冰粉</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            手搓冰粉滑嫩，红糖水、山楂碎、花生粒一撒，消暑解辣一把手。
+          </p>
+        </div>
+      </article>
+
+      <!-- 卡片 4：回锅肉 -->
+      <article class="card-hover bg-white/80 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+        <!-- 回锅肉：真实图片 -->
+        <div class="aspect-[4/3] overflow-hidden">
+          <img src="https://aka.doubaocdn.com/s/zTTdBVrEFu" alt="回锅肉"
+               class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+        </div>
+        <div class="p-4">
+          <h3 class="text-lg font-bold text-brown-900">回锅肉</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            二刀肉熬出灯盏窝，配青蒜苗与郫县豆瓣，川菜里当之无愧的"家常之王"。
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <!-- ===== 更多川味（JS 渲染，默认 4 个 + 查看更多） ===== -->
+    <h3 class="text-lg font-bold text-brown-800 mt-10 mb-3 flex items-center gap-2">
+      <span class="inline-block w-1 h-5 bg-chili rounded-full"></span>更多川味
+    </h3>
+    <div id="foodGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+    <div class="text-center mt-6">
+      <button id="foodMoreBtn" class="hidden px-6 py-2.5 rounded-full bg-chili text-white text-sm font-medium hover:opacity-90 transition shadow-md active:scale-95">查看更多</button>
+    </div>
+  </section>
+  <section id="scenery" class="scroll-offset bg-bamboo-100/40 py-12 sm:py-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <header class="mb-6 sm:mb-8 flex items-end gap-4">
+        <span class="seal w-10 h-10 text-base shrink-0 bg-bamboo-500">景</span>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-brown-900">四川景点大全</h2>
+          <p class="text-brown-500 mt-1 text-sm sm:text-base">45 处川地好耍，搜一哈、挑一哈</p>
+        </div>
+      </header>
+
+      <!-- ===== 搜索框 + 分类筛选 ===== -->
+      <div class="bg-white/85 rounded-2xl p-4 sm:p-5 shadow-card border border-brown-100 mb-6">
+        <!-- 搜索框 -->
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brown-400">🔍</span>
+          <input id="spotSearch" type="search" placeholder="搜景点，比如：熊猫 / 雪山 / 古镇 / 云海…"
+                 class="w-full pl-11 pr-4 py-3 rounded-xl bg-paper border border-brown-200 focus:outline-none focus:ring-2 focus:ring-bamboo-400 text-brown-900 placeholder:text-brown-400">
+        </div>
+        <!-- 分类 chips -->
+        <div id="spotChips" class="mt-3 flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- ===== 4 张精选图（保留原图） ===== -->
+      <h3 class="text-lg font-bold text-brown-800 mb-3 flex items-center gap-2">
+        <span class="inline-block w-1 h-5 bg-chili rounded-full"></span>今日精选
+      </h3>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <article class="card-hover bg-white/85 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="https://aka.doubaocdn.com/s/lcvAJYaeug" alt="都江堰鱼嘴分水堤"
+                 class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+          </div>
+          <div class="p-3">
+            <h4 class="font-bold text-brown-900">都江堰</h4>
+            <p class="text-xs text-brown-500 mt-1">建议半天 · 春秋最巴适</p>
+          </div>
+        </article>
+        <article class="card-hover bg-white/85 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="https://aka.doubaocdn.com/s/CJKuJXeAj1" alt="青城山山门"
+                 class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+          </div>
+          <div class="p-3">
+            <h4 class="font-bold text-brown-900">青城山</h4>
+            <p class="text-xs text-brown-500 mt-1">建议一天 · 夏天最凉</p>
+          </div>
+        </article>
+        <article class="card-hover bg-white/85 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="https://aka.doubaocdn.com/s/Pp6F5OUVGS" alt="峨眉山金顶十方普贤"
+                 class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+          </div>
+          <div class="p-3">
+            <h4 class="font-bold text-brown-900">峨眉山</h4>
+            <p class="text-xs text-brown-500 mt-1">建议 2 天 · 春秋最宜</p>
+          </div>
+        </article>
+        <article class="card-hover bg-white/85 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="https://aka.doubaocdn.com/s/vWsCBqATUl" alt="乐山大佛"
+                 class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E'" />
+          </div>
+          <div class="p-3">
+            <h4 class="font-bold text-brown-900">乐山大佛</h4>
+            <p class="text-xs text-brown-500 mt-1">建议半天 · 春秋最宜</p>
+          </div>
+        </article>
+      </div>
+
+      <!-- ===== 景点网格（JS 渲染） ===== -->
+      <div id="spotGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      <div class="text-center mt-6">
+        <button id="spotMoreBtn" class="hidden px-6 py-2.5 rounded-full bg-bamboo-500 text-white text-sm font-medium hover:bg-bamboo-600 transition shadow-md active:scale-95">查看更多</button>
+      </div>
+      <p id="spotEmpty" class="hidden text-center text-brown-500 py-10">没搜到对应的地方，换个关键词再告一盘～</p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       5. 板块三：川味方言小知识
+       ============================================================ -->
+  <section id="dialect" class="scroll-offset max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    <header class="mb-8 sm:mb-10 flex items-end gap-4">
+      <span class="seal w-10 h-10 text-base shrink-0 bg-chili">话</span>
+      <div>
+        <h2 class="text-2xl sm:text-3xl font-bold text-brown-900">川味方言小知识</h2>
+        <p class="text-brown-500 mt-1 text-sm sm:text-base">听不懂？来两句，马上入乡随俗</p>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- 方言卡片，交替左右色 -->
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-chili border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"巴适得板"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：舒服得不得了、非常好。吃到一口正宗担担面，成都人一定会来一句。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-bamboo-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"要得"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：好的、行、可以。万能应答词，答应别人请你吃火锅时尤其顺口。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-brown-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"摆龙门阵"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：闲聊、聊天。茶馆里盖碗茶一端，就能摆一下午的龙门阵。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-bamboo-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"不存在"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：没关系、不用客气。成都式的豪爽，帮了忙也常挂嘴边。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-chili border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"雄起"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：加油、挺住。球场上的呐喊，也是巴蜀人不服输的劲儿。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-brown-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"瓜娃子"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：傻瓜（多为亲昵调侃，非真骂人）。朋友之间互怼专用，语气软得很。
+        </p>
+      </div>
+      <!-- 以下为新增方言 -->
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-chili border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"抓子"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：做什么 / 怎么了。"你在抓子？"= 你在干嘛？成都人街头打招呼的万能开头。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-bamboo-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"抵拢倒拐"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：一直走到头再转弯。成都人指路的经典话术，比"往前走50米右转"地道多了。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-brown-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"惊风火扯"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：大惊小怪、慌慌张张。形容人咋咋呼呼，一点小事就上蹿下跳。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-bamboo-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"打梦脚"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：走神、心不在焉。开会玩手机被领导点名："莫打梦脚了哈！"
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-chili border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"搓甲甲"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：搓澡 / 搓下来的泥。四川人泡温泉、洗澡的专属说法，听着就很市井。
+        </p>
+      </div>
+      <div class="card-hover bg-white/80 rounded-2xl p-5 shadow-card border-l-4 border-l-brown-500 border border-brown-100">
+        <p class="text-xl font-bold text-brown-900">"抿抿甜"</p>
+        <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+          释义：形容很甜。成都话叠词大法，冰粉抿抿甜、桃子抿抿甜，听着就流口水。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       5.5 板块：川味冷知识（真实数据）
+       ============================================================ -->
+  <section id="facts" class="scroll-offset bg-bamboo-100/40 py-12 sm:py-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <header class="mb-8 sm:mb-10 flex items-end gap-4">
+        <span class="seal w-10 h-10 text-base shrink-0 bg-bamboo-500">知</span>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-brown-900">川味冷知识</h2>
+          <p class="text-brown-500 mt-1 text-sm sm:text-base">你不知道的巴蜀，比火锅还上头</p>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- 冷知识卡片 -->
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">🍵</div>
+          <h3 class="font-bold text-brown-900">一万家茶馆</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            成都有超过 1 万家茶馆，全世界茶馆密度最高的城市之一。盖碗茶一端，龙门阵一摆，就是一下午。
+          </p>
+        </div>
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">🍲</div>
+          <h3 class="font-bold text-brown-900">两万火锅店</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            成都约有 2 万家火锅店、15 万家餐馆。吃，是这座城市刻在骨子里的日常。
+          </p>
+        </div>
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">💴</div>
+          <h3 class="font-bold text-brown-900">世界第一张纸币</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            北宋年间，成都商人发明了世界上最早的纸币"交子"——比欧洲早了 600 多年。
+          </p>
+        </div>
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">☕</div>
+          <h3 class="font-bold text-brown-900">咖啡馆全国第二</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            成都独立咖啡馆超 5000 家，数量全国第二，仅次于上海。老茶馆和新咖啡，在这儿不冲突。
+          </p>
+        </div>
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">🍵</div>
+          <h3 class="font-bold text-brown-900">盖碗茶三件套</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            茶碗、茶盖、茶船，寓意"天盖之、地载之、人育之"。碗盖一刮，就是成都人的节奏。
+          </p>
+        </div>
+        <div class="card-hover bg-white/85 rounded-2xl p-5 shadow-card border border-brown-100">
+          <div class="text-3xl mb-2">🗣️</div>
+          <h3 class="font-bold text-brown-900">"龙门阵"的来历</h3>
+          <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">
+            语出评书《薛仁贵征东》——薛仁贵摆的阵变幻莫测，后来"摆龙门阵"就成了闲聊的代名词。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       6. 板块四：AI 创作馆（核心交互）
+       ============================================================ -->
+  <section id="ai" class="scroll-offset bg-brown-900 text-paper py-12 sm:py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <header class="mb-8 text-center">
+        <span class="seal px-3 py-1 text-xs mb-3">AI · 创作馆</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-paper">生成你的川味打卡图文</h2>
+        <p class="mt-2 text-brown-100/80 text-sm sm:text-base">
+          输入一句四川主题，生成一张川味灵感卡片和打卡文案
+        </p>
+      </header>
+
+      <!-- 输入区 -->
+      <div class="bg-white/10 backdrop-blur rounded-2xl p-5 sm:p-6 border border-white/15">
+        <label for="promptInput" class="block text-sm text-brown-100/90 mb-2">提示词</label>
+        <input
+          id="promptInput"
+          type="text"
+          placeholder="例如：成都老巷里的担担面和盖碗茶"
+          class="w-full px-4 py-3 rounded-xl bg-paper text-ink placeholder:text-brown-500/70
+                 focus:outline-none focus:ring-2 focus:ring-bamboo-300
+                 min-h-[48px] text-base"
+        />
+        <button
+          id="generateBtn"
+          class="mt-4 w-full sm:w-auto px-6 py-3 rounded-xl bg-chili hover:bg-red-700 text-white font-semibold shadow-soft
+                 active:scale-[0.98] transition min-h-[48px]">
+          ✨ 生成川味灵感卡片
+        </button>
+      </div>
+
+      <!-- 结果展示区：默认隐藏，点击生成后显示 -->
+      <div id="resultArea" class="hidden mt-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- 图片预览 -->
+        <div class="rounded-2xl overflow-hidden bg-white/5 border border-white/10">
+          <div class="aspect-[4/3] bg-gradient-to-br from-brown-700 to-bamboo-700 flex items-center justify-center">
+            <!-- 加载中：spinner -->
+            <div id="imgLoading" class="spinner"></div>
+            <!-- 生成完成：占位预览图（用渐变 + 图标模拟） -->
+            <div id="imgPreview" class="hidden w-full h-full flex-col items-center justify-center text-center px-6">
+              <div class="text-5xl mb-3">🍜</div>
+              <p class="text-paper/90 text-sm">川味灵感视觉卡片</p>
+              <p class="text-paper/60 text-xs mt-1 break-words" id="imgCaption"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 文案预览 -->
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-5 sm:p-6 flex flex-col">
+          <h3 class="text-bamboo-300 font-semibold mb-3">打卡文案</h3>
+          <div id="textLoading" class="flex items-center gap-3 text-brown-100/80 text-sm">
+            <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
+            正在为你摇起草稿……
+          </div>
+          <article id="textResult" class="hidden fade-in text-paper/90 leading-relaxed text-[15px] space-y-3" aria-live="polite">
+            <!-- 文案由 JS 填入 -->
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============================================================
+       7. 页脚
+       ============================================================ -->
+  <footer class="bg-brown-900/95 text-brown-100/80 py-8 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 text-center text-sm space-y-2">
+      <p class="font-bold text-paper">川味生活 · 巴蜀市井文化</p>
+      <p>本项目为川味生活文化 Web 应用，数字媒体科技竞赛作品</p>
+      <p class="text-xs text-brown-100/50">© 2026 川味生活 · 保留所有权利</p>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       8. 弹幕开关按钮（右下角悬浮，固定显示）
+       ============================================================ -->
+  <button id="danmakuToggle"
+          style="position:fixed;bottom:6rem;right:1.5rem;z-index:50;width:3rem;height:3rem;border-radius:9999px;background:#4E8E62;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.6);"
+          aria-label="关闭弹幕" title="点击关闭弹幕">
+    弹
+  </button>
+
+  <!-- ============================================================
+       8.5 回到顶部按钮（右下角悬浮，滚动超过 400px 才显示）
+       ============================================================ -->
+  <button id="backToTop"
+          style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:50;width:3rem;height:3rem;border-radius:9999px;background:#5C3A1E;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.6);opacity:0;pointer-events:none;transition:opacity .3s;"
+          aria-label="回到顶部">
+    顶
+  </button>
+
+  <!-- ============================================================
+       9. 图片灯箱（点击卡片图片全屏预览）
+       ============================================================ -->
+  <div id="lightbox"
+       class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/85 p-4"
+       onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt=""
+         class="max-w-full max-h-full rounded-lg shadow-2xl fade-in" />
+    <button id="lightboxClose"
+            class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/20 text-white text-2xl
+                   hover:bg-white/40 transition flex items-center justify-center"
+            onclick="event.stopPropagation(); closeLightbox()"
+            aria-label="关闭预览">×</button>
+  </div>
+
+  <!-- ============================================================
+       JavaScript：交互逻辑
+       ============================================================ -->
+  <script>
+    /* ============================================================
+       动态效果初始化
+       ============================================================ */
+
+    /* --- 1. 导航栏滚动变色 --- */
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 30) navbar.classList.add('nav-scrolled');
+      else navbar.classList.remove('nav-scrolled');
+    }, { passive: true });
+
+    /* --- 2. 滚动渐入：Intersection Observer --- */
+    // 给板块标题、卡片、网格项加 reveal 类
+    document.querySelectorAll('section header, .card-hover, #spotGrid > div, #foodGrid > div, .dialect-card, .trivia-card').forEach(el => {
+      el.classList.add('reveal');
+    });
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          // 同批元素错开 80ms，形成波浪感
+          setTimeout(() => entry.target.classList.add('is-visible'), i * 80);
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    /* --- 3. Banner 标题逐字入场 --- */
+    (function () {
+      const title = document.getElementById('heroTitle');
+      if (!title) return;
+      const text = title.textContent;
+      title.innerHTML = '';
+      [...text].forEach((ch, i) => {
+        const span = document.createElement('span');
+        span.className = 'title-char';
+        span.textContent = ch;
+        span.style.animationDelay = (0.15 + i * 0.12) + 's';
+        title.appendChild(span);
+      });
+    })();
+
+    /* --- 4. 卡片图片 hover 缩放：给所有卡片图片容器加 img-zoom --- */
+    document.querySelectorAll('#food .aspect-\\[4\\/3\\], #scenery .aspect-\\[4\\/3\\], #spotGrid .aspect-\\[4\\/3\\], .card-hover .aspect-\\[4\\/3\\]').forEach(el => {
+      el.classList.add('img-zoom');
+    });
+
+    /* --- 5. 按钮点击波纹 --- */
+    document.querySelectorAll('a[href^="#"], button').forEach(el => {
+      if (el.closest('#lightbox') || el.id === 'lightboxClose') return;
+      el.classList.add('btn-ripple');
+    });
+
+    /* ---------- 工具：平滑滚动（兼容旧浏览器，CSS 已开 scroll-behavior 也无妨） ---------- */
+    function smoothScrollTo(target) {
+      const el = document.querySelector(target);
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.pageYOffset - 64; // 减去导航高度
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+
+    /* ---------- 导航锚点点击：平滑滚动 + 关闭移动端菜单 ---------- */
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuBtn    = document.getElementById('menuBtn');
+
+    function setMobileMenu(opened) {
+      mobileMenu.classList.toggle('hidden', !opened);
+      mobileMenu.setAttribute('aria-hidden', String(!opened));
+      menuBtn.setAttribute('aria-expanded', String(opened));
+      menuBtn.setAttribute('aria-label', opened ? '关闭菜单' : '打开菜单');
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const hash = a.getAttribute('href');
+        if (!hash || hash === '#') return;
+        e.preventDefault();
+        smoothScrollTo(hash);
+        setMobileMenu(false);
+      });
+    });
+
+    /* ---------- 移动端汉堡菜单展开 / 收起 ---------- */
+    menuBtn.addEventListener('click', () => {
+      setMobileMenu(mobileMenu.classList.contains('hidden'));
+    });
+
+    /* ---------- AI 创作馆：模拟生成 ---------- */
+    const promptInput = document.getElementById('promptInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultArea  = document.getElementById('resultArea');
+    const imgLoading  = document.getElementById('imgLoading');
+    const imgPreview  = document.getElementById('imgPreview');
+    const imgCaption  = document.getElementById('imgCaption');
+    const textLoading = document.getElementById('textLoading');
+    const textResult  = document.getElementById('textResult');
+
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.className = 'fixed left-1/2 bottom-6 z-[100] -translate-x-1/2 rounded-full bg-brown-900 px-4 py-2 text-sm text-white shadow-lg transition-opacity';
+        toast.setAttribute('role', 'status');
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.style.opacity = '1';
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+    }
+
+    // 几条预设的打卡文案模板，后续接入通义千问时替换为 API 返回值
+    const captionTemplates = [
+      (p) => `在${p || '成都'}的街角，时间慢得像一碗刚冒热气的盖碗茶。
+      红油一淋，花椒一撒，市井的鲜香就钻进了鼻子里。
+      ——今日份川味打卡，巴适得板。`,
+      (p) =>`推开${p || '老巷'}的木门，木桌竹椅，烟火气扑了满怀。
+      四川的日子，就是这样——一口麻辣，一口清闲，摆摆龙门阵，天就黑了。
+      ——川味生活，记录你的巴蜀一刻。`,
+      (p) => `镜头里的${p || '川西'}，一半是青山流水，一半是人间烟火。
+      把这帧画下来，贴进生活的手账里，下次还要再来。
+      ——AI × 川味，属于你的限定打卡图文。`,
+    ];
+
+    generateBtn.addEventListener('click', () => {
+      const prompt = promptInput.value.trim();
+
+      // 1) 显示结果区，进入"加载中"状态
+      resultArea.classList.remove('hidden');
+      imgLoading.classList.remove('hidden');
+      imgPreview.classList.add('hidden');
+      textLoading.classList.remove('hidden');
+      textResult.classList.add('hidden');
+      generateBtn.disabled = true;
+      generateBtn.textContent = '正在生成灵感卡片……';
+
+      // 2) 模拟 2 秒网络/模型生成耗时
+      setTimeout(() => {
+        // 随机选一条文案模板
+        const tpl = captionTemplates[Math.floor(Math.random() * captionTemplates.length)];
+        const text = tpl(prompt);
+
+        // 3) 填充视觉卡片（当前为离线演示，不伪装成真实出图接口）
+        imgCaption.textContent = prompt || '成都老巷 · 盖碗茶';
+        imgLoading.classList.add('hidden');
+        imgPreview.classList.remove('hidden');
+        imgPreview.classList.add('fade-in');
+
+        // 4) 填文案（按换行分段）
+        textResult.replaceChildren(...text.split('\n').map(line => {
+          const p = document.createElement('p');
+          p.textContent = line.trim();
+          return p;
+        }));
+        textLoading.classList.add('hidden');
+        textResult.classList.remove('hidden');
+
+        // 5) 恢复按钮
+        generateBtn.disabled = false;
+        generateBtn.textContent = '✨ 再生成一张';
+
+        // 6) 滚动到结果区，方便手机用户看到
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 1800);
+    });
+
+    /* 回车也能触发生成 */
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generateBtn.click();
+    });
+
+    /* ============================================================
+       功能 0：弹幕开关
+       - 点击切换弹幕层显示/隐藏，按钮状态同步
+       ============================================================ */
+    const danmakuLayer   = document.querySelector('.danmaku-layer');
+    const danmakuToggle  = document.getElementById('danmakuToggle');
+    let danmakuOn = true;
+
+    danmakuToggle.addEventListener('click', () => {
+      danmakuOn = !danmakuOn;
+      if (danmakuOn) {
+        danmakuLayer.style.display = '';
+        danmakuToggle.classList.remove('bg-gray-400', 'bg-opacity-60');
+        danmakuToggle.classList.add('bg-bamboo-500');
+        danmakuToggle.textContent = '弹';
+        danmakuToggle.title = '点击关闭弹幕';
+      } else {
+        danmakuLayer.style.display = 'none';
+        danmakuToggle.classList.remove('bg-bamboo-500');
+        danmakuToggle.classList.add('bg-gray-400', 'bg-opacity-60');
+        danmakuToggle.textContent = '关';
+        danmakuToggle.title = '点击开启弹幕';
+      }
+    });
+
+    /* ============================================================
+       功能 1：回到顶部按钮
+       - 滚动超过 400px 显示，否则隐藏
+       ============================================================ */
+    const backToTop = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 400) {
+        backToTop.style.opacity = '1';
+        backToTop.style.pointerEvents = 'auto';
+      } else {
+        backToTop.style.opacity = '0';
+        backToTop.style.pointerEvents = 'none';
+      }
+    }, { passive: true });
+
+    backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ============================================================
+       功能 2：方言朗读（真实四川话录音，非浏览器 TTS）
+       - 6 条短句预生成四川话女声音频
+       - 点击按钮播放对应音频，再点别的自动切换
+       ============================================================ */
+    // 按卡片顺序：巴适得板 / 要得 / 摆龙门阵 / 不存在 / 雄起 / 瓜娃子 / 抓子 / 抵拢倒拐 / 惊风火扯 / 打梦脚 / 搓甲甲 / 抿抿甜
+    const dialectAudios = [
+      'https://aka.doubaocdn.com/s/AyEUx1xp94',
+      'https://aka.doubaocdn.com/s/W2hlfXVxHO',
+      'https://aka.doubaocdn.com/s/rewrhIh9mL',
+      'https://aka.doubaocdn.com/s/VQcwHGV4cb',
+      'https://aka.doubaocdn.com/s/2fv8RkNVZ9',
+      'https://aka.doubaocdn.com/s/fRnc8zGeMF',
+      'https://aka.doubaocdn.com/s/59BKmgmKnW',
+      'https://aka.doubaocdn.com/s/aNYwnSdJDs',
+      'https://aka.doubaocdn.com/s/EaSpKYHxUO',
+      'https://aka.doubaocdn.com/s/7WvvH3CXBu',
+      'https://aka.doubaocdn.com/s/tQEVQdKJmU',
+      'https://aka.doubaocdn.com/s/fntiOVPHBF',
+    ];
+
+    let currentAudio = null;
+    let currentBtn   = null;
+
+    function playDialect(url, btn) {
+      // 停掉上一段，避免叠加
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        if (currentBtn) currentBtn.classList.remove('bg-chili', 'text-white');
+      }
+      const audio = new Audio(url);
+      audio.play().catch(() => showToast('方言音频暂时无法播放，请检查网络连接'));
+      // 播放中按钮变红
+      btn.classList.add('bg-chili', 'text-white');
+      const reset = () => btn.classList.remove('bg-chili', 'text-white');
+      audio.onended = reset;
+      audio.onerror = reset;
+      currentAudio = audio;
+      currentBtn   = btn;
+    }
+
+    // 遍历方言卡片，注入朗读按钮（idx 对应上面的音频数组）
+    document.querySelectorAll('#dialect .card-hover').forEach((card, idx) => {
+      const titleP = card.querySelector('p');           // 第一个 <p> 就是方言句子
+      const speakText = titleP.textContent.replace(/[""「」]/g, '').trim();
+
+      // 把标题包进 flex 容器，方便左右对齐
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex items-center justify-between gap-2';
+      titleP.parentNode.insertBefore(wrapper, titleP);
+      wrapper.appendChild(titleP);
+
+      // 创建喇叭按钮
+      const btn = document.createElement('button');
+      btn.className = 'shrink-0 w-9 h-9 rounded-full bg-bamboo-100 text-bamboo-700 hover:bg-bamboo-500 hover:text-white transition flex items-center justify-center';
+      btn.title = '点我读一句四川话';
+      btn.setAttribute('aria-label', '朗读：' + speakText);
+      // 喇叭 SVG 图标
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>`;
+      btn.addEventListener('click', () => playDialect(dialectAudios[idx], btn));
+      wrapper.appendChild(btn);
+    });
+
+    /* ============================================================
+       功能 3：图片灯箱（点击美食/风光卡片图片全屏预览）
+       ============================================================ */
+    const lightbox    = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+
+    // 事件委托：页面上所有 <img> 点击都可放大（含 JS 动态渲染的景点图）
+    document.addEventListener('click', e => {
+      const img = e.target.closest('img');
+      if (!img) return;
+      // 排除灯箱自身、关闭按钮、导航 logo 等非内容图
+      if (img.closest('#lightbox') || img.closest('nav') || img.id === 'lightboxImg') return;
+      if (!img.src || img.src.startsWith('data:')) return;
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt || '';
+      lightbox.classList.remove('hidden');
+      lightbox.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    });
+    // 给内容图加放大光标
+    document.querySelectorAll('#food img, #scenery img, #spotGrid img').forEach(img => {
+      img.style.cursor = 'zoom-in';
+    });
+
+    // 关闭灯箱（挂到 window 上，供 HTML onclick 调用）
+    window.closeLightbox = function () {
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+      document.body.style.overflow = '';
+      lightboxImg.src = '';   // 释放图片
+    };
+
+    // ESC 键关闭灯箱
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+        window.closeLightbox();
+      }
+    });
+
+    /* ============================================================
+       功能 4：风光卡片分享按钮
+       - 手机端调 navigator.share 唤起微信
+       - 不支持则降级复制链接
+       ============================================================ */
+    document.querySelectorAll('#scenery article').forEach(article => {
+      const h3 = article.querySelector('h3');
+      if (!h3) return;
+
+      // 把标题包进 flex，右侧放分享按钮
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex items-center justify-between gap-2';
+      h3.parentNode.insertBefore(wrapper, h3);
+      wrapper.appendChild(h3);
+
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'shrink-0 w-9 h-9 rounded-full bg-bamboo-100 text-bamboo-700 hover:bg-bamboo-500 hover:text-white transition flex items-center justify-center';
+      shareBtn.title = '分享这个地方';
+      shareBtn.setAttribute('aria-label', '分享：' + h3.textContent);
+      // 分享 SVG 图标
+      shareBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/>
+          <circle cx="6"  cy="12" r="3"/>
+          <circle cx="18" cy="19" r="3"/>
+          <line x1="8.6"  y1="10.5" x2="15.4" y2="6.5"/>
+          <line x1="8.6"  y1="13.5" x2="15.4" y2="17.5"/>
+        </svg>`;
+
+      shareBtn.addEventListener('click', async () => {
+        const shareData = {
+          title: '川味生活 · ' + h3.textContent,
+          text: '在川味生活发现了这个地方：' + h3.textContent,
+          url:  window.location.href,
+        };
+        if (navigator.share) {
+          try { await navigator.share(shareData); } catch(e) { /* 用户取消 */ }
+        } else {
+          // 降级：复制链接
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            const old = shareBtn.title;
+            shareBtn.title = '链接已复制！';
+            showToast('链接已复制');
+            setTimeout(() => shareBtn.title = old, 2000);
+          } catch(e) { showToast('当前浏览器不支持分享或复制'); }
+        }
+      });
+      wrapper.appendChild(shareBtn);
+    });
+
+    /* ============================================================
+       四川景点大全：数据 + 搜索 + 分类筛选
+       ============================================================ */
+    const SPOTS = [
+      // —— 成都市区 ——
+      { name:"大熊猫繁育研究基地", region:"成都", emoji:"🐼", desc:"滚滚明星产房，月亮产房看熊猫幼崽。", play:"早起赶 8:30 开门，先冲月亮产房，再逛大熊猫别墅。", hours:"半天", season:"四季皆宜，秋天最舒服" },
+      { name:"武侯祠 · 锦里", region:"成都", emoji:"🏛️", desc:"三国圣地，红墙竹影拍照一绝。", play:"下午逛武侯祠，傍晚锦里吃三大炮、看变脸。", hours:"半天到一天", season:"春秋" },
+      { name:"杜甫草堂", region:"成都", emoji:"📜", desc:"诗圣故居，茅屋故居+花径竹林。", play:"慢慢走、慢慢拍，红墙夹道必打卡。", hours:"2-3 小时", season:"春末夏初" },
+      { name:"宽窄巷子", region:"成都", emoji:"🍵", desc:"清代少城遗存，三条平行巷子。", play:"井巷子拍照、宽巷子喝茶、窄巷子掏耳朵。", hours:"2 小时", season:"四季" },
+      { name:"人民公园 · 鹤鸣茶社", region:"成都", emoji:"🍵", desc:"老成都慢生活原点，盖碗茶摊满坝。", play:"花 15 元喝碗盖碗，再找师傅掏个耳朵。", hours:"2-3 小时", season:"四季" },
+      { name:"春熙路 · 太古里", region:"成都", emoji:"🏙️", desc:"成都最潮街拍地，IFS 爬墙熊猫。", play:"上午爬墙熊猫合影，下午逛街，晚上九眼桥。", hours:"半天", season:"四季" },
+      { name:"金沙遗址博物馆", region:"成都", emoji:"🏺", desc:"太阳神鸟出土地，古蜀文明现场。", play:"先看遗迹馆再逛陈列馆，太阳神鸟必看。", hours:"2-3 小时", season:"四季" },
+      { name:"东郊记忆", region:"成都", emoji:"🎨", desc:"老工厂改造的文创园，红砖墙火车头。", play:"拍照、看展、喝咖啡，晚上有 live。", hours:"半天", season:"四季" },
+      { name:"望江楼公园", region:"成都", emoji:"🎋", desc:"竹的公园，纪念女诗人薛涛。", play:"看竹、登楼、喝茶，人少清静。", hours:"2 小时", season:"春末夏初" },
+      { name:"四川博物院", region:"成都", emoji:"🖼️", desc:"西南最大综合博物馆，免费。", play:"必看巴蜀青铜、汉代陶石、张大千书画。", hours:"2-3 小时", season:"四季，雨天首选" },
+
+      // —— 阿坝 ——
+      { name:"九寨沟", region:"阿坝", emoji:"💎", desc:"翠海叠瀑，人间瑶池。", play:"沟口住一晚，进沟坐观光车到五花海再往下走。", hours:"1-2 天", season:"10 月中秋色最艳" },
+      { name:"黄龙", region:"阿坝", emoji:"🟡", desc:"钙化彩池层层叠叠，像人间瑶池。", play:"索道上、步行下，五彩池必停，注意高反。", hours:"一天", season:"9-10 月" },
+      { name:"四姑娘山", region:"阿坝", emoji:"⛰️", desc:"东方阿尔卑斯，幺妹峰亭亭玉立。", play:"双桥沟坐观光车、长坪沟骑马、海子沟徒步。", hours:"2-3 天", season:"春秋，6 月高山花海" },
+      { name:"若尔盖草原", region:"阿坝", emoji:"🌾", desc:"川西北最大高原湿地草原。", play:"自驾穿花湖到九曲黄河，住藏寨。", hours:"2-3 天", season:"6-8 月花开" },
+      { name:"黄河九曲第一湾", region:"阿坝", emoji:"🌄", desc:"黄河在川北大拐弯，日落一绝。", play:"下午到，爬观景台等日落，带厚外套。", hours:"半天", season:"5-10 月" },
+      { name:"花湖", region:"阿坝", emoji:"🦢", desc:"高原湿地，水鸟翻飞野花遍野。", play:"走木栈道一圈约 2 小时，7 月最美。", hours:"半天", season:"6-8 月" },
+      { name:"毕棚沟", region:"阿坝", emoji:"🏔️", desc:"小九寨，秋冬看雪看彩林。", play:"观光车+电瓶车，磐羊湖拍照，冬天可滑雪。", hours:"一天", season:"10 月彩林 / 12 月雪" },
+      { name:"米亚罗", region:"阿坝", emoji:"🍁", desc:"中国最大红叶风景区之一。", play:"自驾 317 国道，从理县一路看过去。", hours:"一天", season:"10 月中下旬" },
+
+      // —— 甘孜 ——
+      { name:"稻城亚丁", region:"甘孜", emoji:"🏔️", desc:"蓝色星球上最后一片净土。", play:"香格里拉镇住两晚，牛奶海+五色海徒步，带氧气瓶。", hours:"3-4 天", season:"4-5 月杜鹃 / 9-10 月秋" },
+      { name:"海螺沟", region:"甘孜", emoji:"🌋", desc:"低海拔现代冰川，泡温泉看雪山。", play:"二号营地泡温泉，三号营地看冰川，早起看日照金山。", hours:"2 天", season:"11-4 月冰川最佳" },
+      { name:"新都桥", region:"甘孜", emoji:"📷", desc:"摄影家走廊，藏寨杨树小河。", play:"住一晚，早起拍晨雾杨树林，秋天最出片。", hours:"半天", season:"10 月金秋" },
+      { name:"色达佛学院", region:"甘孜", emoji:"🛕", desc:"漫山红房子，信仰之城。", play:"观景台看夜景，早上听诵经，尊重宗教礼仪。", hours:"1-2 天", season:"5-10 月" },
+      { name:"木格措", region:"甘孜", emoji:"💧", desc:"康定情歌发源地，高山湖泊。", play:"观光车到木格措，再经七色海一路往下。", hours:"一天", season:"夏秋" },
+      { name:"塔公草原", region:"甘孜", emoji:"🐎", desc:"草原+雅拉雪山+塔公寺。", play:"住藏家，骑马上山看雅拉雪山日落。", hours:"半天", season:"6-8 月" },
+      { name:"理塘", region:"甘孜", emoji:"🐎", desc:"天空之城，丁真家乡。", play:"勒通古镇仓央嘉措微型博物馆，注意高反慢慢走。", hours:"半天", season:"5-10 月" },
+
+      // —— 川南 ——
+      { name:"峨眉山", region:"川南", emoji:"⛰️", desc:"普贤道场，云海日出佛光。", play:"金顶住一晚等日出，山脚报国寺+清音阁步行。", hours:"2 天", season:"4-6 月 / 9-11 月" },
+      { name:"乐山大佛", region:"川南", emoji:"🙏", desc:"世界最大石刻弥勒，通高 71 米。", play:"走九曲栈道下到大佛脚，或坐船远观拍全景。", hours:"半天", season:"春秋" },
+      { name:"蜀南竹海", region:"川南", emoji:"🎋", desc:"翠甲天下，万顷竹海。", play:"忘忧谷+仙寓洞，坐缆车穿竹海，吃全竹宴。", hours:"1-2 天", season:"四季，夏最凉" },
+      { name:"兴文石海", region:"川南", emoji:"🪨", desc:"喀斯特石林+天坑+溶洞。", play:"天坑观光+天泉洞坐船，地质科普。", hours:"一天", season:"四季" },
+      { name:"夕佳山古民居", region:"川南", emoji:"🏘️", desc:"保存完好的明清庄园，雕梁画栋。", play:"慢慢逛 100 多间房，了解川南民居。", hours:"2 小时", season:"四季" },
+      { name:"五粮液酒厂景区", region:"川南", emoji:"🍶", desc:"十里酒城，工业旅游+酒文化。", play:"坐观光车逛酒瓶地标、酒文化博物馆，可品鉴。", hours:"2-3 小时", season:"四季" },
+
+      // —— 川北 ——
+      { name:"剑门关", region:"川北", emoji:"⚔️", desc:"蜀道难，难于上青天。", play:"走鸟道或猿猱道，必吃剑阁豆腐宴。", hours:"一天", season:"春秋" },
+      { name:"阆中古城", region:"川北", emoji:"🏮", desc:"春节发源地，中国四大古城之一。", play:"住一晚，逛贡院、张飞庙，打一盒保宁醋。", hours:"1-2 天", season:"四季" },
+      { name:"昭化古城", region:"川北", emoji:"🏯", desc:"三国古城，巴蜀第一县。", play:"人少清静，走城墙、看县衙，吃蒸肉。", hours:"半天", season:"四季" },
+      { name:"光雾山", region:"川北", emoji:"🍁", desc:"川北红叶天花板。", play:"大坝+桃园两景区，10 月中下旬漫山红遍。", hours:"1-2 天", season:"10 月中下旬" },
+
+      // —— 古镇 ——
+      { name:"黄龙溪古镇", region:"古镇", emoji:"🌊", desc:"临水古镇，夏天打水仗名场面。", play:"夏天带水枪去龙溪河边，一根面必吃。", hours:"半天", season:"夏天最闹热" },
+      { name:"平乐古镇", region:"古镇", emoji:"🌉", desc:"茶马古道第一镇，白沫江边。", play:"江边喝茶、逛古街，傍晚回成都。", hours:"半天", season:"四季" },
+      { name:"街子古镇", region:"古镇", emoji:"🍃", desc:"青城山脚下，山水小镇。", play:"味江边喝茶，爬康道，吃汤麻饼。", hours:"半天", season:"春秋" },
+      { name:"洛带古镇", region:"古镇", emoji:"🐉", desc:"西部客家第一镇，客家火龙之乡。", play:"逛广东会馆，吃客家伤心凉粉、天鹅蛋。", hours:"半天", season:"四季" },
+      { name:"上里古镇", region:"古镇", emoji:"🏞️", desc:"雅安水墨古镇，二水环绕。", play:"看古桥、韩家大院，吃雅鱼。", hours:"半天", season:"春秋" },
+      { name:"柳江古镇", region:"古镇", emoji:"🌧️", desc:"烟雨柳江，川西小江南。", play:"河边吊脚楼喝茶，雨天最有意境。", hours:"半天", season:"夏秋雨后" },
+
+      // —— 近郊 ——
+      { name:"西岭雪山", region:"近郊", emoji:"❄️", desc:"窗含西岭千秋雪。", play:"前山爬山、后山滑雪，冬天住滑雪场边。", hours:"1-2 天", season:"12-3 月滑雪 / 10 月红叶" },
+      { name:"天台山", region:"近郊", emoji:"✨", desc:"萤火星空，玩水避暑。", play:"夏天晚上看萤火虫，白天踩水。", hours:"1-2 天", season:"6-8 月" },
+      { name:"碧峰峡", region:"近郊", emoji:"🐼", desc:"峡谷+熊猫基地+大熊猫园。", play:"先看熊猫再走峡谷，孩子最爱。", hours:"一天", season:"春夏" },
+      { name:"安仁古镇", region:"近郊", emoji:"🏛️", desc:"博物馆小镇，公馆群。", play:"坐有轨电车逛公馆群，看建川博物馆聚落。", hours:"一天", season:"四季" },
+    ];
+
+    // 景点实拍图映射（有图的用实拍，没图的用 emoji 渐变占位）
+    const SPOT_IMGS = {
+      "大熊猫繁育研究基地": "https://aka.doubaocdn.com/s/UUQ0EEtxUz",
+      "宽窄巷子": "https://aka.doubaocdn.com/s/QWgSFj3y57",
+      "九寨沟": "https://aka.doubaocdn.com/s/kukSVoxKHU",
+      "四姑娘山": "https://aka.doubaocdn.com/s/T1olvSei40",
+      "稻城亚丁": "https://aka.doubaocdn.com/s/fm3QZQIzP1",
+      "色达佛学院": "https://aka.doubaocdn.com/s/COcG3N5Sha",
+      "峨眉山": "https://aka.doubaocdn.com/s/Pp6F5OUVGS",
+      "乐山大佛": "https://aka.doubaocdn.com/s/vWsCBqATUl",
+      "剑门关": "https://aka.doubaocdn.com/s/eoJU947CxT",
+      "阆中古城": "https://aka.doubaocdn.com/s/Mxor7VQWIs",
+      "黄龙溪古镇": "https://aka.doubaocdn.com/s/CJk3wLQoV9",
+      "西岭雪山": "https://aka.doubaocdn.com/s/KwiZKnh1sV",
+      "黄龙": "https://aka.doubaocdn.com/s/z1mg6E2LEw",
+      "若尔盖草原": "https://aka.doubaocdn.com/s/04dNyy8rc6",
+      "海螺沟": "https://aka.doubaocdn.com/s/g9sCwiRvNu",
+      "新都桥": "https://aka.doubaocdn.com/s/wxPxjo5PY5",
+      "蜀南竹海": "https://aka.doubaocdn.com/s/5g6jE58Sc2",
+      "光雾山": "https://aka.doubaocdn.com/s/6YdYSxA710",
+      "碧峰峡": "https://aka.doubaocdn.com/s/5cH7W3Q9Dx",
+      "武侯祠 · 锦里": "https://aka.doubaocdn.com/s/EU9z5OV6S6",
+      "杜甫草堂": "https://aka.doubaocdn.com/s/QXkO4taOLY",
+      "人民公园 · 鹤鸣茶社": "https://aka.doubaocdn.com/s/PJeB25ceOz",
+      "春熙路 · 太古里": "https://aka.doubaocdn.com/s/jVW1MG7NzR",
+      "金沙遗址博物馆": "https://aka.doubaocdn.com/s/sSWdoVN02w",
+      "东郊记忆": "https://aka.doubaocdn.com/s/YCEvuGZTrE",
+      "望江楼公园": "https://aka.doubaocdn.com/s/fqAOrcIZNL",
+      "四川博物院": "https://aka.doubaocdn.com/s/w4j1Hmmt61",
+      "黄河九曲第一湾": "https://aka.doubaocdn.com/s/hNScx7SXoa",
+      "花湖": "https://aka.doubaocdn.com/s/tRg7V7diN2",
+      "毕棚沟": "https://aka.doubaocdn.com/s/u1KUpf9Iah",
+      "米亚罗": "https://aka.doubaocdn.com/s/9WaJVv22js",
+      "木格措": "https://aka.doubaocdn.com/s/DYQ1XWX6Qi",
+      "塔公草原": "https://aka.doubaocdn.com/s/kEsp2xfajS",
+      "理塘": "https://aka.doubaocdn.com/s/5E4a2t9cN9",
+      "兴文石海": "https://aka.doubaocdn.com/s/1hOCfIEQ9l",
+      "夕佳山古民居": "https://aka.doubaocdn.com/s/ixRU6WNb7v",
+      "五粮液酒厂景区": "https://aka.doubaocdn.com/s/bboNTOjCVZ",
+      "昭化古城": "https://aka.doubaocdn.com/s/PUtmdhTVkX",
+      "平乐古镇": "https://aka.doubaocdn.com/s/47hJUiPhPB",
+      "街子古镇": "https://aka.doubaocdn.com/s/LSSvXhWpaF",
+      "洛带古镇": "https://aka.doubaocdn.com/s/H9mVyacogx",
+      "上里古镇": "https://aka.doubaocdn.com/s/Vu1HCCnrfd",
+      "柳江古镇": "https://aka.doubaocdn.com/s/4ZHS3Sddxi",
+      "天台山": "https://aka.doubaocdn.com/s/72hF8BuBWv",
+      "安仁古镇": "https://aka.doubaocdn.com/s/H3ff8QbFGF",
+    };
+    const SPOT_FALLBACK = "data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='225'%3E%3Crect%20width='400'%20height='225'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E";
+
+    // 分类（顺序即 chip 顺序）
+    const REGIONS = ["全部","成都","阿坝","甘孜","川南","川北","古镇","近郊"];
+
+    const spotGrid = document.getElementById('spotGrid');
+    const spotSearch = document.getElementById('spotSearch');
+    const spotChips = document.getElementById('spotChips');
+    const spotEmpty = document.getElementById('spotEmpty');
+    let activeRegion = "全部";
+    let showAllSpots = false;  // 默认只显示 4 个，点"查看更多"展开全部
+
+    const spotCount = document.createElement('p');
+    spotCount.id = 'spotCount';
+    spotCount.className = 'mt-3 text-sm text-brown-500';
+    spotSearch.insertAdjacentElement('afterend', spotCount);
+
+    // 渲染分类 chips
+    REGIONS.forEach(r => {
+      const b = document.createElement('button');
+      b.className = "chip-btn px-3 py-1.5 rounded-full text-sm border transition";
+      b.dataset.region = r;
+      b.textContent = r;
+      spotChips.appendChild(b);
+    });
+    function paintChips() {
+      spotChips.querySelectorAll('.chip-btn').forEach(b => {
+        if (b.dataset.region === activeRegion) {
+          b.className = "chip-btn px-3 py-1.5 rounded-full text-sm border transition bg-bamboo-500 text-white border-bamboo-500";
+        } else {
+          b.className = "chip-btn px-3 py-1.5 rounded-full text-sm border transition bg-white text-brown-700 border-brown-200 hover:border-bamboo-400";
+        }
+      });
+    }
+    // 渲染景点卡片
+    function renderSpots() {
+      const kw = (spotSearch.value || "").trim().toLowerCase();
+      let list = SPOTS.filter(s => {
+        const okRegion = (activeRegion === "全部") || s.region === activeRegion;
+        const okKw = !kw ||
+          s.name.toLowerCase().includes(kw) ||
+          s.desc.toLowerCase().includes(kw) ||
+          s.play.toLowerCase().includes(kw) ||
+          s.region.toLowerCase().includes(kw);
+        return okRegion && okKw;
+      });
+      const total = list.length;
+      spotCount.textContent = kw || activeRegion !== '全部' ? `找到 ${total} 处相关景点` : `共收录 ${SPOTS.length} 处川地好耍`;
+      // 默认显示 4 个，搜索/筛选状态下或已展开则显示全部
+      const visible = (showAllSpots || kw) ? list : list.slice(0, 4);
+      spotGrid.innerHTML = visible.map(s => {
+        const img = SPOT_IMGS[s.name];
+        const media = img
+          ? `<div class="aspect-[16/9] overflow-hidden rounded-xl mb-3">
+               <img src="${img}" alt="${s.name}" class="w-full h-full object-cover" loading="lazy"
+                    onerror="this.onerror=null;this.src='${SPOT_FALLBACK}'">
+             </div>`
+          : `<div class="aspect-[16/9] rounded-xl mb-3 flex items-center justify-center"
+                  style="background:linear-gradient(135deg,#EBDCBF 0%,#D4C4A0 100%)">
+               <span class="text-5xl">${s.emoji}</span>
+             </div>`;
+        return `
+        <article class="card-hover bg-white/85 rounded-2xl p-4 shadow-card border border-brown-100 flex flex-col">
+          ${media}
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">${s.emoji}</span>
+              <h4 class="font-bold text-brown-900 text-base">${s.name}</h4>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-bamboo-100 text-bamboo-700">${s.region}</span>
+          </div>
+          <p class="text-sm text-brown-700/90 leading-relaxed mb-3">${s.desc}</p>
+          <div class="mt-auto space-y-1.5 text-xs">
+            <div class="flex gap-2"><span class="text-brown-400 shrink-0">🗺️ 玩法</span><span class="text-brown-700">${s.play}</span></div>
+            <div class="flex gap-2"><span class="text-brown-400 shrink-0">⏱️ 用时</span><span class="text-brown-700">${s.hours}</span></div>
+            <div class="flex gap-2"><span class="text-brown-400 shrink-0">🌸 最佳</span><span class="text-brown-700">${s.season}</span></div>
+          </div>
+        </article>`;
+      }).join('');
+      spotEmpty.classList.toggle('hidden', total > 0);
+      // "查看更多"按钮：仅在未搜索、未展开、且总数>4 时显示
+      const moreBtn = document.getElementById('spotMoreBtn');
+      if (moreBtn) {
+        if (!kw && !showAllSpots && total > 4) {
+          moreBtn.classList.remove('hidden');
+          moreBtn.textContent = '查看更多';
+        } else {
+          moreBtn.classList.add('hidden');
+        }
+      }
+    }
+
+    // 查看更多按钮
+    const spotMoreBtn = document.getElementById('spotMoreBtn');
+    if (spotMoreBtn) {
+      spotMoreBtn.addEventListener('click', () => {
+        showAllSpots = true;
+        renderSpots();
+      });
+    }
+    // 切换分类或搜索时重置展开状态
+    spotChips.addEventListener('click', e => {
+      const b = e.target.closest('.chip-btn');
+      if (!b) return;
+      activeRegion = b.dataset.region;
+      showAllSpots = false;
+      paintChips();
+      renderSpots();
+    });
+    spotSearch.addEventListener('input', () => { showAllSpots = false; renderSpots(); });
+    paintChips();
+    renderSpots();
+
+    /* ============================================================
+       四川美食大全：数据 + 渲染 + 查看更多
+       ============================================================ */
+    const FOODS = [
+      { name:"麻婆豆腐", emoji:"🧆", desc:"麻辣鲜香嫩烫，川菜之首，一勺扒两碗饭。", img:"https://aka.doubaocdn.com/s/KfyhBo5jQ3" },
+      { name:"夫妻肺片", emoji:"🥩", desc:"红油凉拌牛杂，麻辣回甜，凉菜扛把子。", img:"https://aka.doubaocdn.com/s/Z8JCCVUVsW" },
+      { name:"钟水饺", emoji:"🥟", desc:"红油甜辣，皮薄馅嫩，成都老字号。", img:"https://aka.doubaocdn.com/s/vErziUeyRh" },
+      { name:"龙抄手", emoji:"🥟", desc:"红油抄手，皮薄馅嫩汤浓，蓉城小吃佼佼者。", img:"https://aka.doubaocdn.com/s/onslIU736z" },
+      { name:"三大炮", emoji:"🍡", desc:"糯米糍粑裹黄豆粉淋红糖，扔三坨响三声。", img:"https://aka.doubaocdn.com/s/HLerTLrTGx" },
+      { name:"四川火锅", emoji:"🍲", desc:"牛油红锅翻滚，毛肚鸭肠七上八下。", img:"https://aka.doubaocdn.com/s/tD7eZn8iSy" },
+      { name:"冒菜", emoji:"🍲", desc:"一个人的火锅，自选食材冒一碗。", img:"https://aka.doubaocdn.com/s/xbeMXUrYLX" },
+      { name:"口水鸡", emoji:"🐔", desc:"红油凉拌鸡，麻辣鲜嫩，看一眼就流口水。", img:"https://aka.doubaocdn.com/s/T2xk5ODsX5" },
+      { name:"串串香", emoji:"🍢", desc:"竹签串起麻辣江湖，数签签结账。", img:"https://aka.doubaocdn.com/s/zdmVdGtm0I" },
+      { name:"毛血旺", emoji:"🥘", desc:"鸭血毛肚黄喉齐冒，麻辣鲜香烫。", img:"https://aka.doubaocdn.com/s/3Q4A2ZvUnR" },
+      { name:"水煮肉片", emoji:"🥩", desc:"肉片滑嫩，红油麻辣，淋油滋啦一声。", img:"https://aka.doubaocdn.com/s/WGFhuoqZzf" },
+      { name:"鱼香肉丝", emoji:"🥢", desc:"酸甜咸辣，没有鱼却有鱼香味，下饭神器。", img:"https://aka.doubaocdn.com/s/Uxfji6glYs" },
+      { name:"宫保鸡丁", emoji:"🐔", desc:"糊辣荔枝味，花生鸡丁，川菜经典。", img:"https://aka.doubaocdn.com/s/rwGsgLbPf9" },
+      { name:"辣子鸡", emoji:"🌶️", desc:"干辣椒里找鸡丁，越嚼越香。", img:"https://aka.doubaocdn.com/s/eQQvnRfBHA" },
+      { name:"酸辣粉", emoji:"🍜", desc:"红薯粉酸辣开胃，嗦一口冒汗。", img:"https://aka.doubaocdn.com/s/eapmNcX54G" },
+      { name:"甜水面", emoji:"🍜", desc:"甜辣麻香，粗面劲道，成都独一份。", img:"https://aka.doubaocdn.com/s/hUxAlEmgFf" },
+      { name:"宜宾燃面", emoji:"🍜", desc:"干拌红油芽菜，油重无水，点火能燃。", img:"https://aka.doubaocdn.com/s/MzepVkTsdq" },
+      { name:"绵阳米粉", emoji:"🍜", desc:"细粉红汤，绵阳人的早晨从一碗米粉开始。", img:"https://aka.doubaocdn.com/s/3W63N2VZc4" },
+      { name:"肥肠粉", emoji:"🍜", desc:"红薯粉配卤肥肠，加个锅盔最巴适。", img:"https://aka.doubaocdn.com/s/jlyLeFy8w2" },
+      { name:"蛋烘糕", emoji:"🥞", desc:"成都街头小蛋糕，甜咸馅料随便挑。", img:"https://aka.doubaocdn.com/s/wS4G8gKN1h" },
+      { name:"军屯锅盔", emoji:"🥖", desc:"酥脆千层肉馅饼，彭州军屯镇特产。", img:"https://aka.doubaocdn.com/s/aLLyBOobUm" },
+      { name:"张飞牛肉", emoji:"🥩", desc:"阆中特产，干香麻辣，外表黑内心红。", img:"https://aka.doubaocdn.com/s/vqMYNsU1SY" },
+      { name:"富顺豆花", emoji:"🥣", desc:"嫩豆花配蘸水，自贡富顺名吃。", img:"https://aka.doubaocdn.com/s/kZ7o2bV23M" },
+      { name:"赖汤圆", emoji:"🍡", desc:"黑芝麻汤圆，皮薄馅大，成都老字号。", img:"https://aka.doubaocdn.com/s/7mjWTWvbUK" },
+    ];
+    const FOOD_FALLBACK = "data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='300'%3E%3Crect%20width='400'%20height='300'%20fill='%23EBDCBF'/%3E%3Ctext%20x='50%25'%20y='50%25'%20fill='%238B5A2B'%20font-family='serif'%20font-size='18'%20text-anchor='middle'%20dominant-baseline='middle'%3E川味生活%3C/text%3E%3C/svg%3E";
+
+    const foodGrid = document.getElementById('foodGrid');
+    const foodMoreBtn = document.getElementById('foodMoreBtn');
+    let showAllFood = false;
+
+    function renderFoods() {
+      const list = showAllFood ? FOODS : FOODS.slice(0, 4);
+      foodGrid.innerHTML = list.map(f => {
+        const media = f.img
+          ? `<div class="aspect-[4/3] overflow-hidden">
+               <img src="${f.img}" alt="${f.name}" class="w-full h-full object-cover" loading="lazy"
+                    onerror="this.onerror=null;this.src='${FOOD_FALLBACK}'">
+             </div>`
+          : `<div class="aspect-[4/3] flex items-center justify-center"
+                  style="background:linear-gradient(135deg,#EBDCBF 0%,#D4C4A0 100%)">
+               <span class="text-5xl">${f.emoji}</span>
+             </div>`;
+        return `
+        <article class="card-hover bg-white/80 rounded-2xl overflow-hidden shadow-card border border-brown-100">
+          ${media}
+          <div class="p-4">
+            <h3 class="text-lg font-bold text-brown-900">${f.name}</h3>
+            <p class="mt-2 text-sm text-brown-700/90 leading-relaxed">${f.desc}</p>
+          </div>
+        </article>`;
+      }).join('');
+      if (foodMoreBtn) {
+        if (!showAllFood && FOODS.length > 4) {
+          foodMoreBtn.classList.remove('hidden');
+          foodMoreBtn.textContent = '查看更多';
+        } else {
+          foodMoreBtn.classList.add('hidden');
+        }
+      }
+    }
+    foodMoreBtn.addEventListener('click', () => { showAllFood = true; renderFoods(); });
+    renderFoods();
+  </script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->
